@@ -8,15 +8,48 @@ import { getHexColor } from '../../../services/color.processing';
 export const addAndroidIcon = async (iconSource: string, backgroundColor: string) => {
   try {
     await checkImageIsSquare(iconSource);
-    await generateLegacyIcons(iconSource);
-    await generateAdaptiveIcons(iconSource, backgroundColor);
+    await generateLegacyIcons(iconSource, backgroundColor);
+    //await generateAdaptiveIcons(iconSource, backgroundColor);
   } catch (err) {
     console.log(err);
   }
 };
 
-const generateLegacyIcons = (iconSource: string) =>
-  Promise.all(
+const generateLegacyIcons = (iconSource: string, backgroundColor: string) =>{
+  replaceInFile(
+    join(__dirname, `../../../../templates/android/values/colors-icon.xml`),
+    `${ANDROID_MAIN_RES_PATH}/values/colors-icon.xml`,
+    [
+      {
+        newContent: getHexColor(backgroundColor),
+        oldContent: /{{iconBackground}}/g,
+      },
+    ]
+  );
+
+  replaceInFile(
+    `${ANDROID_MAIN_PATH}/AndroidManifest.xml`,
+    `${ANDROID_MAIN_PATH}/AndroidManifest.xml`,
+    [
+      {
+        newContent: '',
+        oldContent: /^.*android:roundIcon.*[\r\n]/gm,
+      },
+    ]
+  );
+
+  replaceInFile(
+    `${ANDROID_MAIN_PATH}/AndroidManifest.xml`,
+    `${ANDROID_MAIN_PATH}/AndroidManifest.xml`,
+    [
+      {
+        newContent: '      android:icon="@mipmap/ic_launcher"',
+        oldContent: /^.*android:icon.*$/gm,
+      },
+    ]
+  );
+  
+  return Promise.all(
     config.androidIconSizes.map(size =>
       generateResizedAssets(
         iconSource,
@@ -25,6 +58,7 @@ const generateLegacyIcons = (iconSource: string) =>
       )
     )
   );
+}
 
 const generateAdaptiveIcons = (iconSource: string, backgroundColor: string) => {
   replaceInFile(

@@ -9,10 +9,11 @@ import { EResizeMode } from '../../../services/type';
 export const addAndroidSplashScreen = async (
   imageSource: string,
   backgroundColor: string,
-  resizeMode?: EResizeMode
+  resizeMode?: EResizeMode,
+  packageName?: string
 ) => {
   try {
-    addReactNativeSplashScreen(backgroundColor, resizeMode);
+    addReactNativeSplashScreen(backgroundColor, resizeMode, packageName);
     await generateAndroidSplashImages(imageSource);
   } catch (err) {
     console.log(err);
@@ -34,25 +35,27 @@ const addLaunchScreenBackgroundColor = (backgroundColor: string) => {
 
 const addReactNativeSplashScreen = (
   backgroundColor: string,
-  resizeMode: EResizeMode = EResizeMode.CONTAIN
+  resizeMode: EResizeMode = EResizeMode.CONTAIN,
+  packageName: string
 ) => {
-  addLaunchScreenBackgroundColor(backgroundColor);
+  // addLaunchScreenBackgroundColor(backgroundColor);
 
-  copyFile(
-    join(__dirname, '../../../../templates/android/drawable/splashscreen.xml'),
-    `${ANDROID_MAIN_RES_PATH}/drawable/splashscreen.xml`
-  );
+  // copyFile(
+  //   join(__dirname, '../../../../templates/android/drawable/splashscreen.xml'),
+  //   `${ANDROID_MAIN_RES_PATH}/drawable/splashscreen.xml`
+  // );
   copyFile(
     join(__dirname, `../../../../templates/android/layout/launch_screen.${resizeMode}.xml`),
     `${ANDROID_MAIN_RES_PATH}/layout/launch_screen.xml`
   );
-  applyPatch(`${ANDROID_MAIN_RES_PATH}/values/styles.xml`, {
-    pattern: /^.*<resources>.*[\r\n]/g,
-    patch: readFile(join(__dirname, '../../../../templates/android/values/styles-splash.xml')),
-  });
+  // applyPatch(`${ANDROID_MAIN_RES_PATH}/values/styles.xml`, {
+  //   pattern: /^.*<resources>.*[\r\n]/g,
+  //   patch: readFile(join(__dirname, '../../../../templates/android/values/styles-splash.xml')),
+  // });
 
   const packageJson = require(join(process.cwd(), './package'));
-  const mainActivityPath = `${ANDROID_MAIN_PATH}/java/com/${packageJson.name.toLowerCase()}/MainActivity.java`;
+  const packageNameDirectory = packageName ? packageName.replace(/\./g, '/') : `com/${packageJson.name.toLowerCase()}`
+  const mainActivityPath = `${ANDROID_MAIN_PATH}/java/${packageNameDirectory}/MainActivity.java`;
 
   applyPatch(mainActivityPath, {
     pattern: /^(.+?)(?=import)/gs,
@@ -64,7 +67,7 @@ const addReactNativeSplashScreen = (
   if (readFile(mainActivityPath).match(onCreateRegExp)) {
     applyPatch(mainActivityPath, {
       pattern: onCreateRegExp,
-      patch: 'SplashScreen.show(this, R.style.SplashScreenTheme);',
+      patch: 'SplashScreen.show(this);',
     });
   } else {
     applyPatch(mainActivityPath, {
@@ -72,8 +75,8 @@ const addReactNativeSplashScreen = (
       patch:
         '    @Override\n' +
         '    protected void onCreate(Bundle savedInstanceState) {\n' +
-        '        SplashScreen.show(this, R.style.SplashScreenTheme);\n' +
         '        super.onCreate(savedInstanceState);\n' +
+        '        SplashScreen.show(this);\n' +
         '    }',
     });
   }
@@ -84,9 +87,9 @@ const generateAndroidSplashImages = (imageSource: string) =>
     config.androidSplashImages.map(({ size, density }) =>
       generateResizedAssets(
         imageSource,
-        `${ANDROID_MAIN_RES_PATH}/drawable-${density}/splash_image.png`,
-        size,
-        size,
+        `${ANDROID_MAIN_RES_PATH}/drawable-${density}/launch_screen.png`,
+        size.width,
+        size.height,
         {
           fit: 'inside',
         }
