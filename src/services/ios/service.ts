@@ -3,6 +3,7 @@ import { copyFile } from '../file.processing';
 
 export enum EImageSetType {
   IMAGE = 'imageset',
+  LAUNCH_IMAGE = 'launchimage',
   ICON = 'appiconset',
 }
 
